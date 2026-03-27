@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -20,8 +21,12 @@ import (
 )
 
 func main() {
+	// Parse command-line flags
+	configPath := flag.String("config", "", "path to config file")
+	flag.Parse()
+
 	// Load configuration
-	cfg, err := config.Load("")
+	cfg, err := config.Load(*configPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
 		os.Exit(1)
