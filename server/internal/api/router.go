@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/trekmax/cloudguard-monitor/internal/collector"
 	"github.com/trekmax/cloudguard-monitor/internal/store"
+	"github.com/trekmax/cloudguard-monitor/internal/ws"
 )
 
 // Server holds the dependencies for the API server.
@@ -15,17 +16,24 @@ type Server struct {
 	scheduler *collector.Scheduler
 	sysInfo   *collector.SystemInfo
 	token     string
+	hub       *ws.Hub
 }
 
 // NewServer creates a new API server.
-func NewServer(logger *slog.Logger, st *store.Store, sched *collector.Scheduler, sysInfo *collector.SystemInfo, token string) *Server {
+func NewServer(logger *slog.Logger, st *store.Store, sched *collector.Scheduler, sysInfo *collector.SystemInfo, token string, hub *ws.Hub) *Server {
 	return &Server{
 		logger:    logger,
 		store:     st,
 		scheduler: sched,
 		sysInfo:   sysInfo,
 		token:     token,
+		hub:       hub,
 	}
+}
+
+// Hub returns the WebSocket hub.
+func (s *Server) Hub() *ws.Hub {
+	return s.hub
 }
 
 // SetupRouter creates and configures the Gin router.
@@ -46,7 +54,32 @@ func (s *Server) SetupRouter() *gin.Engine {
 		v1.GET("/metrics", s.handleMetrics)
 		v1.GET("/system", s.handleSystem)
 		v1.GET("/processes", s.handleProcesses)
+
+		// Alert rules
+		v1.GET("/alerts/rules", s.handleListAlertRules)
+		v1.POST("/alerts/rules", s.handleCreateAlertRule)
+		v1.PUT("/alerts/rules/:id", s.handleUpdateAlertRule)
+		v1.DELETE("/alerts/rules/:id", s.handleDeleteAlertRule)
+
+		// Alert events
+		v1.GET("/alerts", s.handleListAlerts)
+		v1.POST("/alerts/:id/ack", s.handleAckAlert)
 	}
 
+	// WebSocket (auth via query param)
+	r.GET("/ws/v1/realtime", s.handleWebSocket)
+
 	return r
+}
+
+func (s *Server) handleWebSocket(c *gin.Context) {
+	// Authenticate via query parameter
+	if s.token != "" {
+		token := c.Query("token")
+		if token != s.token {
+			errorResponse(c, 401, "invalid token")
+			return
+		}
+	}
+	s.hub.HandleConnect(c.Writer, c.Request)
 }

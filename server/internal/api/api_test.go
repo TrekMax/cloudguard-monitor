@@ -7,11 +7,13 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/trekmax/cloudguard-monitor/internal/collector"
 	"github.com/trekmax/cloudguard-monitor/internal/store"
+	"github.com/trekmax/cloudguard-monitor/internal/ws"
 )
 
 func setupTestServer(t *testing.T, token string) (*Server, *store.Store) {
@@ -27,6 +29,7 @@ func setupTestServer(t *testing.T, token string) (*Server, *store.Store) {
 	t.Cleanup(func() { st.Close() })
 
 	sched := collector.NewScheduler(logger)
+	hub := ws.NewHub(logger)
 	sysInfo := &collector.SystemInfo{
 		Hostname:     "test-host",
 		OS:           "Linux",
@@ -35,7 +38,7 @@ func setupTestServer(t *testing.T, token string) (*Server, *store.Store) {
 		AgentVersion: "0.1.0",
 	}
 
-	srv := NewServer(logger, st, sched, sysInfo, token)
+	srv := NewServer(logger, st, sched, sysInfo, token, hub)
 	return srv, st
 }
 
@@ -223,5 +226,81 @@ func TestProcessesEndpoint(t *testing.T) {
 
 	if w.Code != 200 {
 		t.Errorf("status = %d, want 200", w.Code)
+	}
+}
+
+func TestAlertRulesAPI(t *testing.T) {
+	srv, _ := setupTestServer(t, "")
+	router := srv.SetupRouter()
+
+	// Create rule
+	body := `{"name":"CPU High","category":"cpu","metric":"usage","operator":"gt","threshold":90,"duration":60}`
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/alerts/rules", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != 201 {
+		t.Fatalf("create rule: status = %d, want 201, body: %s", w.Code, w.Body.String())
+	}
+
+	// List rules
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/api/v1/alerts/rules", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Errorf("list rules: status = %d, want 200", w.Code)
+	}
+
+	var resp Response
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	rules, ok := resp.Data.([]interface{})
+	if !ok {
+		t.Fatal("expected data to be an array")
+	}
+	if len(rules) != 1 {
+		t.Errorf("expected 1 rule, got %d", len(rules))
+	}
+
+	// Delete rule
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("DELETE", "/api/v1/alerts/rules/1", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Errorf("delete rule: status = %d, want 200", w.Code)
+	}
+}
+
+func TestAlertEventsAPI(t *testing.T) {
+	srv, st := setupTestServer(t, "")
+	router := srv.SetupRouter()
+
+	// Create a rule and event directly
+	ruleID, _ := st.CreateAlertRule(&store.AlertRule{
+		Name: "Test", Category: "cpu", Metric: "usage",
+		Operator: "gt", Threshold: 90, Enabled: true,
+	})
+	st.CreateAlertEvent(&store.AlertEvent{
+		RuleID: ruleID, Status: "firing", Value: 95, Message: "test", FiredAt: time.Now().Unix(),
+	})
+
+	// List alerts
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/alerts?status=firing", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Errorf("list alerts: status = %d, want 200", w.Code)
+	}
+
+	// Ack alert
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("POST", "/api/v1/alerts/1/ack", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Errorf("ack alert: status = %d, want 200", w.Code)
 	}
 }

@@ -13,11 +13,13 @@ import (
 	"syscall"
 	"time"
 
+	alertpkg "github.com/trekmax/cloudguard-monitor/internal/alert"
 	"github.com/trekmax/cloudguard-monitor/internal/api"
 	"github.com/trekmax/cloudguard-monitor/internal/collector"
 	"github.com/trekmax/cloudguard-monitor/internal/config"
 	"github.com/trekmax/cloudguard-monitor/internal/logging"
 	"github.com/trekmax/cloudguard-monitor/internal/store"
+	"github.com/trekmax/cloudguard-monitor/internal/ws"
 )
 
 func main() {
@@ -75,14 +77,37 @@ func main() {
 	sched.Start(ctx)
 	logger.Info("collectors started", "count", 5)
 
-	// Start metrics persistence goroutine
-	go persistMetrics(ctx, logger, sched, st)
+	// Initialize WebSocket hub
+	hub := ws.NewHub(logger)
+
+	// Initialize alert engine
+	alertEngine := alertpkg.NewEngine(logger, st, sched)
+	alertEngine.OnAlert(func(event *store.AlertEvent, rule *store.AlertRule) {
+		// Broadcast alert via WebSocket
+		hub.Broadcast(&ws.Message{
+			Type:      "alert",
+			Timestamp: time.Now().Unix(),
+			Data: map[string]interface{}{
+				"id":        event.ID,
+				"rule_name": rule.Name,
+				"status":    event.Status,
+				"value":     event.Value,
+				"threshold": rule.Threshold,
+				"message":   event.Message,
+			},
+		})
+	})
+	go alertEngine.Run(ctx)
+	logger.Info("alert engine started")
+
+	// Start metrics persistence + WebSocket broadcast goroutine
+	go persistAndBroadcast(ctx, logger, sched, st, hub)
 
 	// Start cleanup goroutine
 	go runCleanup(ctx, logger, st, cfg.Database.RetentionDays)
 
 	// Setup and start API server
-	srv := api.NewServer(logger, st, sched, sysInfo, cfg.Auth.Token)
+	srv := api.NewServer(logger, st, sched, sysInfo, cfg.Auth.Token, hub)
 	router := srv.SetupRouter()
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
@@ -111,8 +136,8 @@ func main() {
 	logger.Info("goodbye")
 }
 
-// persistMetrics periodically saves collected metrics to the database.
-func persistMetrics(ctx context.Context, logger *slog.Logger, sched *collector.Scheduler, st *store.Store) {
+// persistAndBroadcast saves metrics to DB and pushes via WebSocket.
+func persistAndBroadcast(ctx context.Context, logger *slog.Logger, sched *collector.Scheduler, st *store.Store, hub *ws.Hub) {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
@@ -125,7 +150,10 @@ func persistMetrics(ctx context.Context, logger *slog.Logger, sched *collector.S
 			var records []store.MetricRecord
 			ts := snap.Timestamp.Unix()
 
-			for _, metrics := range snap.Metrics {
+			// Build WS broadcast data
+			wsData := make(map[string]interface{})
+
+			for collectorName, metrics := range snap.Metrics {
 				for _, m := range metrics {
 					labelsJSON := ""
 					if len(m.Labels) > 0 {
@@ -141,6 +169,11 @@ func persistMetrics(ctx context.Context, logger *slog.Logger, sched *collector.S
 							Labels:    labelsJSON,
 						})
 					}
+
+					// For WS: use first (aggregate) metric per collector
+					if _, exists := wsData[collectorName]; !exists && len(m.Labels) == 0 {
+						wsData[collectorName] = m.Values
+					}
 				}
 			}
 
@@ -148,6 +181,15 @@ func persistMetrics(ctx context.Context, logger *slog.Logger, sched *collector.S
 				if err := st.InsertMetrics(records); err != nil {
 					logger.Error("failed to persist metrics", "error", err)
 				}
+			}
+
+			// Broadcast via WebSocket if clients connected
+			if hub.ClientCount() > 0 {
+				hub.Broadcast(&ws.Message{
+					Type:      "metrics",
+					Timestamp: ts,
+					Data:      wsData,
+				})
 			}
 		}
 	}

@@ -48,6 +48,7 @@ func rootCmd() *cobra.Command {
 	cmd.AddCommand(metricsCmd())
 	cmd.AddCommand(systemCmd())
 	cmd.AddCommand(dashboardCmd())
+	cmd.AddCommand(alertsCmd())
 
 	return cmd
 }
