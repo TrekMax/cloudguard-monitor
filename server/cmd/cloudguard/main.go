@@ -18,6 +18,7 @@ import (
 	"github.com/trekmax/cloudguard-monitor/internal/collector"
 	"github.com/trekmax/cloudguard-monitor/internal/config"
 	"github.com/trekmax/cloudguard-monitor/internal/logging"
+	"github.com/trekmax/cloudguard-monitor/internal/security"
 	"github.com/trekmax/cloudguard-monitor/internal/store"
 	"github.com/trekmax/cloudguard-monitor/internal/ws"
 )
@@ -37,6 +38,17 @@ func main() {
 	// Initialize logger
 	logger := logging.Setup(cfg.Log.Level, cfg.Log.Format)
 	logger.Info("starting CloudGuard Monitor", "version", "0.1.0")
+
+	// Auto-generate token if empty
+	if cfg.Auth.Token == "" {
+		token, err := security.GenerateToken(32)
+		if err != nil {
+			logger.Error("failed to generate token", "error", err)
+			os.Exit(1)
+		}
+		cfg.Auth.Token = token
+		logger.Info("auto-generated API token", "token", token)
+	}
 
 	// Ensure data directory exists
 	dbDir := filepath.Dir(cfg.Database.Path)
@@ -110,6 +122,13 @@ func main() {
 	srv := api.NewServer(logger, st, sched, sysInfo, cfg.Auth.Token, hub)
 	router := srv.SetupRouter()
 
+	// Add security middleware
+	router.Use(security.AuditMiddleware(logger))
+	if len(cfg.Security.IPWhitelist) > 0 {
+		router.Use(security.IPWhitelistMiddleware(cfg.Security.IPWhitelist))
+		logger.Info("IP whitelist enabled", "allowed", cfg.Security.IPWhitelist)
+	}
+
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	httpServer := &http.Server{
 		Addr:    addr,
@@ -117,10 +136,29 @@ func main() {
 	}
 
 	go func() {
-		logger.Info("API server starting", "addr", addr)
-		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("API server error", "error", err)
-			cancel()
+		if cfg.TLS.Enabled {
+			certFile, keyFile, err := security.EnsureCert(security.TLSConfig{
+				Enabled:  cfg.TLS.Enabled,
+				CertFile: cfg.TLS.CertFile,
+				KeyFile:  cfg.TLS.KeyFile,
+				AutoCert: cfg.TLS.AutoCert,
+			}, filepath.Dir(cfg.Database.Path))
+			if err != nil {
+				logger.Error("TLS setup failed", "error", err)
+				cancel()
+				return
+			}
+			logger.Info("API server starting (HTTPS)", "addr", addr)
+			if err := httpServer.ListenAndServeTLS(certFile, keyFile); err != nil && err != http.ErrServerClosed {
+				logger.Error("API server error", "error", err)
+				cancel()
+			}
+		} else {
+			logger.Info("API server starting (HTTP)", "addr", addr)
+			if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				logger.Error("API server error", "error", err)
+				cancel()
+			}
 		}
 	}()
 

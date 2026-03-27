@@ -76,6 +76,11 @@ cloudguard-cli dashboard
 | `/api/v1/metrics` | GET | 历史指标查询 | Token |
 | `/api/v1/system` | GET | 系统信息 | Token |
 | `/api/v1/processes` | GET | 进程列表 | Token |
+| `/api/v1/alerts` | GET | 告警事件列表（支持 status/limit/offset） | Token |
+| `/api/v1/alerts/:id/ack` | POST | 确认告警 | Token |
+| `/api/v1/alerts/rules` | GET/POST | 告警规则列表/创建 | Token |
+| `/api/v1/alerts/rules/:id` | PUT/DELETE | 更新/删除告警规则 | Token |
+| `/ws/v1/realtime` | WebSocket | 实时指标 + 告警推送 | Token (query) |
 
 ### 认证
 
@@ -133,7 +138,35 @@ log:
   format: "text"        # text, json
 
 auth:
-  token: ""
+  token: ""             # 为空时自动生成
+
+tls:
+  enabled: false        # 启用 HTTPS
+  auto_cert: true       # 自动生成自签名证书
+  cert_file: ""         # 自定义证书路径
+  key_file: ""          # 自定义私钥路径
+
+security:
+  ip_whitelist: []      # 为空则不限制，如 ["127.0.0.1", "10.0.0.0/8"]
+```
+
+## 部署
+
+### 一键安装
+
+```bash
+sudo bash scripts/install.sh
+```
+
+安装脚本会自动：创建系统用户、下载二进制、生成配置和 Token、配置 systemd 服务。
+
+### 手动部署
+
+```bash
+cd server && make build
+cp bin/cloudguard /usr/local/bin/
+cp configs/cloudguard.yaml /etc/cloudguard/
+./bin/cloudguard --config /etc/cloudguard/cloudguard.yaml
 ```
 
 ## 项目结构
@@ -146,6 +179,9 @@ cloudguard-monitor/
 │   │   ├── api/            #   REST API (Gin)
 │   │   ├── collector/      #   指标采集器 (CPU/内存/磁盘/网络/进程)
 │   │   ├── store/          #   SQLite 存储层
+│   │   ├── alert/          #   告警引擎
+│   │   ├── ws/             #   WebSocket 推送
+│   │   ├── security/       #   TLS、审计、IP 白名单
 │   │   ├── config/         #   配置管理
 │   │   └── logging/        #   结构化日志
 │   └── configs/            #   默认配置文件
@@ -156,6 +192,9 @@ cloudguard-monitor/
 │       ├── client/         #   API 客户端
 │       ├── tui/            #   bubbletea TUI Dashboard
 │       └── output/         #   多格式输出
+├── scripts/                # 部署脚本
+│   └── install.sh          #   一键安装
+├── .github/workflows/      # CI/CD
 └── docs/                   # 项目文档
 ```
 
@@ -181,7 +220,10 @@ make lint
 | 组件 | 技术 |
 |------|------|
 | 服务端 | Go, Gin, SQLite (WAL), slog |
+| 告警引擎 | 阈值判断 + 持续时间 + 抑制 + 自动恢复 |
+| WebSocket | gorilla/websocket 实时推送 |
 | CLI | Go, cobra, bubbletea, lipgloss |
+| 安全 | TLS (自签名/自定义证书)、Token 认证、IP 白名单、审计日志 |
 | 数据采集 | /proc 文件系统直接读取 |
 | 配置 | YAML |
 
@@ -202,8 +244,8 @@ make lint
 - [x] M2: 核心服务端 — 完整采集器、SQLite 存储、REST API
 - [x] M3: CLI 客户端 — 命令框架、TUI Dashboard、多格式输出
 - [ ] M4: Android App
-- [ ] M5: 告警与通知 — 告警引擎、WebSocket 推送
-- [ ] M6: 安全与发布 — TLS、部署脚本、v1.0 Release
+- [x] M5: 告警与通知 — 告警引擎、WebSocket 推送、CLI 告警管理
+- [x] M6: 安全与发布 — TLS、IP 白名单、审计日志、安装脚本、CI/CD
 
 ## License
 

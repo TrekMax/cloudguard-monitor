@@ -14,11 +14,24 @@ type Config struct {
 	Database  DatabaseConfig  `yaml:"database"`
 	Log       LogConfig       `yaml:"log"`
 	Auth      AuthConfig      `yaml:"auth"`
+	TLS       TLSConfig       `yaml:"tls"`
+	Security  SecurityConfig  `yaml:"security"`
 }
 
 type ServerConfig struct {
 	Host string `yaml:"host"`
 	Port int    `yaml:"port"`
+}
+
+type TLSConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	CertFile string `yaml:"cert_file"`
+	KeyFile  string `yaml:"key_file"`
+	AutoCert bool   `yaml:"auto_cert"`
+}
+
+type SecurityConfig struct {
+	IPWhitelist []string `yaml:"ip_whitelist"`
 }
 
 type CollectorConfig struct {
