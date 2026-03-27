@@ -81,13 +81,11 @@ func (c *Client) get(path string, params map[string]string) (*APIResponse, error
 	return &apiResp, nil
 }
 
-// StatusData represents the /api/v1/status response.
+// StatusData represents the /api/v1/status response (normalized).
 type StatusData struct {
-	CPU     map[string]float64 `json:"cpu"`
-	Memory  map[string]float64 `json:"memory"`
-	Network map[string]float64 `json:"network"`
-	Disk    json.RawMessage    `json:"disk"`
-	Process json.RawMessage    `json:"process"`
+	CPU     map[string]float64
+	Memory  map[string]float64
+	Network map[string]float64
 }
 
 // GetStatus fetches real-time server status.
@@ -97,11 +95,52 @@ func (c *Client) GetStatus() (*StatusData, error) {
 		return nil, err
 	}
 
-	var data StatusData
-	if err := json.Unmarshal(resp.Data, &data); err != nil {
+	// Parse into raw map to handle mixed types (object vs array)
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(resp.Data, &raw); err != nil {
 		return nil, fmt.Errorf("parse status data: %w", err)
 	}
-	return &data, nil
+
+	data := &StatusData{
+		CPU:     parseMetricField(raw["cpu"]),
+		Memory:  parseMetricField(raw["memory"]),
+		Network: parseMetricField(raw["network"]),
+	}
+
+	return data, nil
+}
+
+// parseMetricField extracts a map[string]float64 from either an object or
+// an array (takes the first element without labels as the aggregate).
+func parseMetricField(raw json.RawMessage) map[string]float64 {
+	if len(raw) == 0 {
+		return nil
+	}
+
+	// Try as a plain object first
+	var obj map[string]float64
+	if err := json.Unmarshal(raw, &obj); err == nil {
+		return obj
+	}
+
+	// Try as an array — pick the first entry whose "labels" is empty/missing
+	var arr []struct {
+		Values map[string]float64 `json:"values"`
+		Labels map[string]string  `json:"labels"`
+	}
+	if err := json.Unmarshal(raw, &arr); err == nil {
+		for _, item := range arr {
+			if len(item.Labels) == 0 {
+				return item.Values
+			}
+		}
+		// Fallback: return the first item's values
+		if len(arr) > 0 {
+			return arr[0].Values
+		}
+	}
+
+	return nil
 }
 
 // SystemInfo represents the /api/v1/system response.
