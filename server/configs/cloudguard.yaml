@@ -1,0 +1,20 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+collector:
+  cpu_interval: 5       # seconds
+  memory_interval: 5    # seconds
+  disk_interval: 30     # seconds
+  network_interval: 5   # seconds
+
+database:
+  path: "./data/cloudguard.db"
+  retention_days: 30
+
+log:
+  level: "info"         # debug, info, warn, error
+  format: "text"        # text, json
+
+auth:
+  token: ""             # auto-generated if empty
