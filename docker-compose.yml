@@ -1,6 +1,5 @@
 services:
   cloudguard:
-    image: tianshuangke/cloudguard-monitor:latest
     build:
       context: ./server
       dockerfile: Dockerfile
