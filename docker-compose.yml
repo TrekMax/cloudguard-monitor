@@ -1,0 +1,27 @@
+services:
+  cloudguard:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: cloudguard
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    volumes:
+      - cloudguard-data:/data
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    environment:
+      - CLOUDGUARD_AUTH_TOKEN=${CLOUDGUARD_AUTH_TOKEN:-}
+    pid: host
+    read_only: true
+    tmpfs:
+      - /tmp
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  cloudguard-data:

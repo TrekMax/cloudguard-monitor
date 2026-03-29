@@ -5,7 +5,7 @@ GO := go
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: all build test lint run clean fmt vet cross
+.PHONY: all build test lint run clean fmt vet cross docker
 
 all: lint test build
 
@@ -37,3 +37,7 @@ coverage:
 cross:
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 $(GO) build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 $(CMD_DIR)
 	@echo "Built: $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64"
+
+docker:
+	docker build -t cloudguard:$(VERSION) -t cloudguard:latest .
+	@echo "Built: cloudguard:$(VERSION)"

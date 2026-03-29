@@ -1,0 +1,14 @@
+*/bin/
+server/data/
+*.out
+*.html
+.idea/
+.vscode/
+.git/
+.DS_Store
+docs/
+cli/
+android/
+scripts/
+README.md
+CLAUDE.md

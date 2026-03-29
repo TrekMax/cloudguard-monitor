@@ -1,0 +1,20 @@
+server:
+  host: "0.0.0.0"
+  port: 8081
+
+collector:
+  cpu_interval: 5
+  memory_interval: 5
+  disk_interval: 30
+  network_interval: 5
+
+database:
+  path: "/data/cloudguard.db"
+  retention_days: 30
+
+log:
+  level: "info"
+  format: "json"
+
+auth:
+  token: ""
