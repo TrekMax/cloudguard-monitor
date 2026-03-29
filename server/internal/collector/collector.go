@@ -7,8 +7,8 @@ import (
 
 // Metrics holds a collection of metric samples from a single collection.
 type Metrics struct {
-	Category  string            `json:"category"`
-	Timestamp time.Time         `json:"timestamp"`
+	Category  string             `json:"category"`
+	Timestamp time.Time          `json:"timestamp"`
 	Values    map[string]float64 `json:"values"`
 	Labels    map[string]string  `json:"labels,omitempty"`
 }

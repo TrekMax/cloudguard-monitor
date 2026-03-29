@@ -7,16 +7,16 @@ import (
 
 // AlertRule represents an alert rule configuration.
 type AlertRule struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	Category  string `json:"category"`
-	Metric    string `json:"metric"`
-	Operator  string `json:"operator"`  // gt, lt, eq
+	ID        int64   `json:"id"`
+	Name      string  `json:"name"`
+	Category  string  `json:"category"`
+	Metric    string  `json:"metric"`
+	Operator  string  `json:"operator"` // gt, lt, eq
 	Threshold float64 `json:"threshold"`
-	Duration  int    `json:"duration"`  // seconds, 0 = instant
-	Enabled   bool   `json:"enabled"`
-	CreatedAt int64  `json:"created_at"`
-	UpdatedAt int64  `json:"updated_at"`
+	Duration  int     `json:"duration"` // seconds, 0 = instant
+	Enabled   bool    `json:"enabled"`
+	CreatedAt int64   `json:"created_at"`
+	UpdatedAt int64   `json:"updated_at"`
 }
 
 // AlertEvent represents a triggered alert.

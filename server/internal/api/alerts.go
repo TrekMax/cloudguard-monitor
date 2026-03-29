@@ -23,6 +23,10 @@ func (s *Server) handleListAlertRules(c *gin.Context) {
 	success(c, rules)
 }
 
+var validOperators = map[string]bool{
+	"gt": true, "gte": true, "lt": true, "lte": true, "eq": true, "ne": true,
+}
+
 func (s *Server) handleCreateAlertRule(c *gin.Context) {
 	var req store.AlertRule
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -32,6 +36,18 @@ func (s *Server) handleCreateAlertRule(c *gin.Context) {
 
 	if req.Name == "" || req.Category == "" || req.Metric == "" || req.Operator == "" {
 		errorResponse(c, http.StatusBadRequest, "name, category, metric, and operator are required")
+		return
+	}
+	if len(req.Name) > 128 || len(req.Category) > 64 || len(req.Metric) > 64 {
+		errorResponse(c, http.StatusBadRequest, "field length exceeds limit")
+		return
+	}
+	if !validOperators[req.Operator] {
+		errorResponse(c, http.StatusBadRequest, "operator must be one of: gt, gte, lt, lte, eq, ne")
+		return
+	}
+	if req.Duration < 0 {
+		errorResponse(c, http.StatusBadRequest, "duration must be non-negative")
 		return
 	}
 

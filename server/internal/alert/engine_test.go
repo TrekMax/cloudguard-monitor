@@ -239,6 +239,8 @@ type mockCollector struct {
 	metrics  []*collector.Metrics
 }
 
-func (m *mockCollector) Name() string                                        { return m.name }
-func (m *mockCollector) Interval() time.Duration                             { return m.interval }
-func (m *mockCollector) Collect(ctx context.Context) ([]*collector.Metrics, error) { return m.metrics, nil }
+func (m *mockCollector) Name() string            { return m.name }
+func (m *mockCollector) Interval() time.Duration { return m.interval }
+func (m *mockCollector) Collect(ctx context.Context) ([]*collector.Metrics, error) {
+	return m.metrics, nil
+}

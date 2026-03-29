@@ -63,6 +63,25 @@ download_binary() {
     info "Downloading CloudGuard Monitor v${VERSION}..."
 
     curl -fsSL -o "${INSTALL_DIR}/cloudguard" "$DOWNLOAD_URL"
+
+    # Verify checksum
+    CHECKSUM_URL="https://github.com/${REPO}/releases/download/v${VERSION}/checksums.txt"
+    if curl -fsSL -o /tmp/cloudguard-checksums.txt "$CHECKSUM_URL" 2>/dev/null; then
+        EXPECTED=$(grep "cloudguard-${OS}-${ARCH}$" /tmp/cloudguard-checksums.txt | awk '{print $1}')
+        if [ -n "$EXPECTED" ]; then
+            ACTUAL=$(sha256sum "${INSTALL_DIR}/cloudguard" | awk '{print $1}')
+            if [ "$EXPECTED" != "$ACTUAL" ]; then
+                rm -f "${INSTALL_DIR}/cloudguard"
+                err "Checksum verification failed! Binary removed."
+                exit 1
+            fi
+            ok "Checksum verified"
+        fi
+        rm -f /tmp/cloudguard-checksums.txt
+    else
+        info "Checksum file not available, skipping verification"
+    fi
+
     chmod +x "${INSTALL_DIR}/cloudguard"
     ok "Binary installed to ${INSTALL_DIR}/cloudguard"
 }

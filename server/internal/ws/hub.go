@@ -4,19 +4,33 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
+const maxMessageSize = 4096 // 4KB max inbound message
+
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin: func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		// Allow requests with no Origin header (non-browser clients)
+		if origin == "" {
+			return true
+		}
+		// Allow same-origin requests
+		host := r.Host
+		return strings.HasSuffix(origin, "://"+host) ||
+			strings.HasPrefix(origin, "https://"+host) ||
+			strings.HasPrefix(origin, "http://"+host)
+	},
 }
 
 // Message is a WebSocket message envelope.
 type Message struct {
-	Type      string      `json:"type"`      // metrics, alert
+	Type      string      `json:"type"` // metrics, alert
 	Timestamp int64       `json:"timestamp"`
 	Data      interface{} `json:"data"`
 }
@@ -109,6 +123,7 @@ func (h *Hub) removeClient(c *Client) {
 func (c *Client) readPump() {
 	defer c.hub.removeClient(c)
 
+	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 	c.conn.SetPongHandler(func(string) error {
 		c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))

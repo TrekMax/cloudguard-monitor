@@ -44,7 +44,7 @@ func IPWhitelistMiddleware(allowed []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		clientIP := c.ClientIP()
 		if !allowedSet[clientIP] {
-			errorResponse(c, 403, "IP not allowed: "+clientIP)
+			errorResponse(c, 403, "access denied")
 			c.Abort()
 			return
 		}

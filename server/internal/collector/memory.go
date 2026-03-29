@@ -24,7 +24,7 @@ func NewMemoryCollector() *MemoryCollector {
 	}
 }
 
-func (m *MemoryCollector) Name() string           { return "memory" }
+func (m *MemoryCollector) Name() string            { return "memory" }
 func (m *MemoryCollector) Interval() time.Duration { return m.interval }
 
 func (m *MemoryCollector) Collect(ctx context.Context) ([]*Metrics, error) {
@@ -62,16 +62,16 @@ func (m *MemoryCollector) Collect(ctx context.Context) ([]*Metrics, error) {
 		Category:  "memory",
 		Timestamp: time.Now(),
 		Values: map[string]float64{
-			"total":        float64(total),
-			"used":         float64(used),
-			"free":         float64(free),
-			"available":    float64(available),
-			"buffers":      float64(buffers),
-			"cached":       float64(cached),
+			"total":         float64(total),
+			"used":          float64(used),
+			"free":          float64(free),
+			"available":     float64(available),
+			"buffers":       float64(buffers),
+			"cached":        float64(cached),
 			"usage_percent": usagePercent,
-			"swap_total":   float64(swapTotal),
-			"swap_used":    float64(swapUsed),
-			"swap_percent": swapPercent,
+			"swap_total":    float64(swapTotal),
+			"swap_used":     float64(swapUsed),
+			"swap_percent":  swapPercent,
 		},
 	}}, nil
 }

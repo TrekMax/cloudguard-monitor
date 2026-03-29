@@ -102,7 +102,7 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 	}
 }
 
-func TestAuthMiddleware_EmptyTokenDisablesAuth(t *testing.T) {
+func TestAuthMiddleware_EmptyTokenRejects(t *testing.T) {
 	srv, _ := setupTestServer(t, "")
 	router := srv.SetupRouter()
 
@@ -110,17 +110,18 @@ func TestAuthMiddleware_EmptyTokenDisablesAuth(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/v1/status", nil)
 	router.ServeHTTP(w, req)
 
-	if w.Code != 200 {
-		t.Errorf("status = %d, want 200 (auth disabled)", w.Code)
+	if w.Code != 503 {
+		t.Errorf("status = %d, want 503 (auth not configured)", w.Code)
 	}
 }
 
 func TestStatusEndpoint(t *testing.T) {
-	srv, _ := setupTestServer(t, "")
+	srv, _ := setupTestServer(t, "test-token")
 	router := srv.SetupRouter()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/v1/status", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
 	router.ServeHTTP(w, req)
 
 	if w.Code != 200 {
@@ -135,7 +136,7 @@ func TestStatusEndpoint(t *testing.T) {
 }
 
 func TestMetricsEndpoint(t *testing.T) {
-	srv, st := setupTestServer(t, "")
+	srv, st := setupTestServer(t, "test-token")
 	router := srv.SetupRouter()
 
 	// Insert some test data
@@ -148,6 +149,7 @@ func TestMetricsEndpoint(t *testing.T) {
 	// Query all
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/v1/metrics", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
 	router.ServeHTTP(w, req)
 
 	if w.Code != 200 {
@@ -157,6 +159,7 @@ func TestMetricsEndpoint(t *testing.T) {
 	// Query by category
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/api/v1/metrics?category=cpu", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
 	router.ServeHTTP(w, req)
 
 	var resp Response
@@ -171,7 +174,7 @@ func TestMetricsEndpoint(t *testing.T) {
 }
 
 func TestMetricsEndpoint_InvalidParams(t *testing.T) {
-	srv, _ := setupTestServer(t, "")
+	srv, _ := setupTestServer(t, "test-token")
 	router := srv.SetupRouter()
 
 	tests := []struct {
@@ -185,6 +188,7 @@ func TestMetricsEndpoint_InvalidParams(t *testing.T) {
 	for _, tt := range tests {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", tt.query, nil)
+		req.Header.Set("Authorization", "Bearer test-token")
 		router.ServeHTTP(w, req)
 
 		if w.Code != 400 {
@@ -194,11 +198,12 @@ func TestMetricsEndpoint_InvalidParams(t *testing.T) {
 }
 
 func TestSystemEndpoint(t *testing.T) {
-	srv, _ := setupTestServer(t, "")
+	srv, _ := setupTestServer(t, "test-token")
 	router := srv.SetupRouter()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/v1/system", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
 	router.ServeHTTP(w, req)
 
 	if w.Code != 200 {
@@ -217,11 +222,12 @@ func TestSystemEndpoint(t *testing.T) {
 }
 
 func TestProcessesEndpoint(t *testing.T) {
-	srv, _ := setupTestServer(t, "")
+	srv, _ := setupTestServer(t, "test-token")
 	router := srv.SetupRouter()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/v1/processes", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
 	router.ServeHTTP(w, req)
 
 	if w.Code != 200 {
@@ -230,14 +236,16 @@ func TestProcessesEndpoint(t *testing.T) {
 }
 
 func TestAlertRulesAPI(t *testing.T) {
-	srv, _ := setupTestServer(t, "")
+	srv, _ := setupTestServer(t, "test-token")
 	router := srv.SetupRouter()
+	auth := "Bearer test-token"
 
 	// Create rule
 	body := `{"name":"CPU High","category":"cpu","metric":"usage","operator":"gt","threshold":90,"duration":60}`
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/api/v1/alerts/rules", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", auth)
 	router.ServeHTTP(w, req)
 
 	if w.Code != 201 {
@@ -247,6 +255,7 @@ func TestAlertRulesAPI(t *testing.T) {
 	// List rules
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/api/v1/alerts/rules", nil)
+	req.Header.Set("Authorization", auth)
 	router.ServeHTTP(w, req)
 
 	if w.Code != 200 {
@@ -266,6 +275,7 @@ func TestAlertRulesAPI(t *testing.T) {
 	// Delete rule
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("DELETE", "/api/v1/alerts/rules/1", nil)
+	req.Header.Set("Authorization", auth)
 	router.ServeHTTP(w, req)
 
 	if w.Code != 200 {
@@ -274,8 +284,9 @@ func TestAlertRulesAPI(t *testing.T) {
 }
 
 func TestAlertEventsAPI(t *testing.T) {
-	srv, st := setupTestServer(t, "")
+	srv, st := setupTestServer(t, "test-token")
 	router := srv.SetupRouter()
+	auth := "Bearer test-token"
 
 	// Create a rule and event directly
 	ruleID, _ := st.CreateAlertRule(&store.AlertRule{
@@ -289,6 +300,7 @@ func TestAlertEventsAPI(t *testing.T) {
 	// List alerts
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/v1/alerts?status=firing", nil)
+	req.Header.Set("Authorization", auth)
 	router.ServeHTTP(w, req)
 
 	if w.Code != 200 {
@@ -298,6 +310,7 @@ func TestAlertEventsAPI(t *testing.T) {
 	// Ack alert
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("POST", "/api/v1/alerts/1/ack", nil)
+	req.Header.Set("Authorization", auth)
 	router.ServeHTTP(w, req)
 
 	if w.Code != 200 {

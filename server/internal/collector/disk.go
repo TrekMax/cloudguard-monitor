@@ -38,7 +38,7 @@ func NewDiskCollector() *DiskCollector {
 	}
 }
 
-func (d *DiskCollector) Name() string           { return "disk" }
+func (d *DiskCollector) Name() string            { return "disk" }
 func (d *DiskCollector) Interval() time.Duration { return d.interval }
 
 func (d *DiskCollector) Collect(ctx context.Context) ([]*Metrics, error) {

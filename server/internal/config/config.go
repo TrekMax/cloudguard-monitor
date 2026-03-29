@@ -35,9 +35,9 @@ type SecurityConfig struct {
 }
 
 type CollectorConfig struct {
-	CPUInterval    int `yaml:"cpu_interval"`    // seconds
-	MemoryInterval int `yaml:"memory_interval"` // seconds
-	DiskInterval   int `yaml:"disk_interval"`   // seconds
+	CPUInterval     int `yaml:"cpu_interval"`     // seconds
+	MemoryInterval  int `yaml:"memory_interval"`  // seconds
+	DiskInterval    int `yaml:"disk_interval"`    // seconds
 	NetworkInterval int `yaml:"network_interval"` // seconds
 }
 

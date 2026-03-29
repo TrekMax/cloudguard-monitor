@@ -80,17 +80,8 @@ func generateSelfSignedCert(certFile, keyFile string) error {
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
-		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("0.0.0.0")},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1"), net.IPv6loopback},
 		DNSNames:              []string{"localhost"},
-	}
-
-	// Add local IPs
-	if addrs, err := net.InterfaceAddrs(); err == nil {
-		for _, addr := range addrs {
-			if ipNet, ok := addr.(*net.IPNet); ok {
-				template.IPAddresses = append(template.IPAddresses, ipNet.IP)
-			}
-		}
 	}
 
 	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)

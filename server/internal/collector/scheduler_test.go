@@ -17,7 +17,7 @@ type mockCollector struct {
 	called   int
 }
 
-func (m *mockCollector) Name() string           { return m.name }
+func (m *mockCollector) Name() string            { return m.name }
 func (m *mockCollector) Interval() time.Duration { return m.interval }
 func (m *mockCollector) Collect(ctx context.Context) ([]*Metrics, error) {
 	m.called++

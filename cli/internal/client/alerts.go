@@ -99,7 +99,10 @@ func (c *Client) post(path string, body interface{}) error {
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read response: %w", err)
+	}
 	var apiResp APIResponse
 	if err := json.Unmarshal(respBody, &apiResp); err != nil {
 		return fmt.Errorf("parse response: %w", err)
@@ -125,7 +128,10 @@ func (c *Client) delete(path string) error {
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read response: %w", err)
+	}
 	var apiResp APIResponse
 	if err := json.Unmarshal(respBody, &apiResp); err != nil {
 		return fmt.Errorf("parse response: %w", err)

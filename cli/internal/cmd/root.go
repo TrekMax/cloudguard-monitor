@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	cfg       *CLIConfig
-	apiClient *client.Client
+	cfg        *CLIConfig
+	apiClient  *client.Client
 	formatFlag string
 )
 

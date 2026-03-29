@@ -13,15 +13,15 @@ import (
 
 // SystemInfo holds static system information collected once at startup.
 type SystemInfo struct {
-	Hostname    string `json:"hostname"`
-	OS          string `json:"os"`
-	Platform    string `json:"platform"`
-	Kernel      string `json:"kernel"`
-	Arch        string `json:"arch"`
-	CPUCores    int    `json:"cpu_cores"`
-	BootTime    int64  `json:"boot_time"`
-	Uptime      int64  `json:"uptime"` // seconds
-	GoVersion   string `json:"go_version"`
+	Hostname     string `json:"hostname"`
+	OS           string `json:"os"`
+	Platform     string `json:"platform"`
+	Kernel       string `json:"kernel"`
+	Arch         string `json:"arch"`
+	CPUCores     int    `json:"cpu_cores"`
+	BootTime     int64  `json:"boot_time"`
+	Uptime       int64  `json:"uptime"` // seconds
+	GoVersion    string `json:"go_version"`
 	AgentVersion string `json:"agent_version"`
 }
 
@@ -104,12 +104,12 @@ func readBootTime() int64 {
 
 // ProcessInfo holds information about a single process.
 type ProcessInfo struct {
-	PID     int     `json:"pid"`
-	Name    string  `json:"name"`
-	State   string  `json:"state"`
-	CPUPct  float64 `json:"cpu_percent"`
+	PID    int     `json:"pid"`
+	Name   string  `json:"name"`
+	State  string  `json:"state"`
+	CPUPct float64 `json:"cpu_percent"`
 	MemRSS int64   `json:"mem_rss"` // bytes
-	User    string  `json:"user"`
+	User   string  `json:"user"`
 }
 
 // ProcessCollector collects top N processes by CPU/memory usage.
@@ -127,7 +127,7 @@ func NewProcessCollector() *ProcessCollector {
 	}
 }
 
-func (p *ProcessCollector) Name() string           { return "process" }
+func (p *ProcessCollector) Name() string            { return "process" }
 func (p *ProcessCollector) Interval() time.Duration { return p.interval }
 
 func (p *ProcessCollector) Collect(ctx context.Context) ([]*Metrics, error) {

@@ -47,8 +47,8 @@ func NewCPUCollector() *CPUCollector {
 	}
 }
 
-func (c *CPUCollector) Name() string             { return "cpu" }
-func (c *CPUCollector) Interval() time.Duration   { return c.interval }
+func (c *CPUCollector) Name() string            { return "cpu" }
+func (c *CPUCollector) Interval() time.Duration { return c.interval }
 
 func (c *CPUCollector) Collect(ctx context.Context) ([]*Metrics, error) {
 	current, perCore, err := c.readProcStat()
@@ -69,12 +69,12 @@ func (c *CPUCollector) Collect(ctx context.Context) ([]*Metrics, error) {
 			Category:  "cpu",
 			Timestamp: now,
 			Values: map[string]float64{
-				"usage":   0,
-				"user":    0,
-				"system":  0,
-				"idle":    100,
-				"iowait":  0,
-				"cores":   float64(len(perCore)),
+				"usage":  0,
+				"user":   0,
+				"system": 0,
+				"idle":   100,
+				"iowait": 0,
+				"cores":  float64(len(perCore)),
 			},
 		}}, nil
 	}

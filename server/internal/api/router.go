@@ -1,7 +1,9 @@
 package api
 
 import (
+	"crypto/subtle"
 	"log/slog"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/trekmax/cloudguard-monitor/internal/collector"
@@ -41,6 +43,8 @@ func (s *Server) SetupRouter() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(securityHeaders())
+	r.Use(RateLimitMiddleware(30, 60)) // 30 req/s per IP, burst 60
 	r.Use(LoggingMiddleware(s.logger))
 
 	// Health check (no auth)
@@ -72,14 +76,25 @@ func (s *Server) SetupRouter() *gin.Engine {
 	return r
 }
 
+func securityHeaders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Header("X-Frame-Options", "DENY")
+		c.Header("Cache-Control", "no-store")
+		c.Next()
+	}
+}
+
 func (s *Server) handleWebSocket(c *gin.Context) {
 	// Authenticate via query parameter
-	if s.token != "" {
-		token := c.Query("token")
-		if token != s.token {
-			errorResponse(c, 401, "invalid token")
-			return
-		}
+	if s.token == "" {
+		errorResponse(c, http.StatusServiceUnavailable, "authentication not configured")
+		return
+	}
+	token := c.Query("token")
+	if subtle.ConstantTimeCompare([]byte(token), []byte(s.token)) != 1 {
+		errorResponse(c, http.StatusUnauthorized, "invalid token")
+		return
 	}
 	s.hub.HandleConnect(c.Writer, c.Request)
 }

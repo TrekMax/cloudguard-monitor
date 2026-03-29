@@ -38,6 +38,12 @@ func New(dbPath string, logger *slog.Logger) (*Store, error) {
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
 
+	// Enable foreign key constraints
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("enable foreign keys: %w", err)
+	}
+
 	s := &Store{db: db, logger: logger}
 	if err := s.migrate(); err != nil {
 		db.Close()

@@ -47,7 +47,9 @@ func main() {
 			os.Exit(1)
 		}
 		cfg.Auth.Token = token
-		logger.Info("auto-generated API token", "token", token)
+		// Print token to stderr for secure capture; never log the full token
+		fmt.Fprintf(os.Stderr, "auto-generated API token: %s\n", token)
+		logger.Info("auto-generated API token", "token_prefix", token[:8]+"...")
 	}
 
 	// Ensure data directory exists

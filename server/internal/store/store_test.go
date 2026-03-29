@@ -150,7 +150,7 @@ func TestCleanup(t *testing.T) {
 	records := []MetricRecord{
 		{Timestamp: now - 86400*40, Category: "cpu", Name: "usage", Value: 10}, // 40 days old
 		{Timestamp: now - 86400*35, Category: "cpu", Name: "usage", Value: 20}, // 35 days old
-		{Timestamp: now, Category: "cpu", Name: "usage", Value: 50},             // now
+		{Timestamp: now, Category: "cpu", Name: "usage", Value: 50},            // now
 	}
 
 	if err := s.InsertMetrics(records); err != nil {

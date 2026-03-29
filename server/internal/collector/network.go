@@ -35,7 +35,7 @@ func NewNetworkCollector() *NetworkCollector {
 	}
 }
 
-func (n *NetworkCollector) Name() string           { return "network" }
+func (n *NetworkCollector) Name() string            { return "network" }
 func (n *NetworkCollector) Interval() time.Duration { return n.interval }
 
 func (n *NetworkCollector) Collect(ctx context.Context) ([]*Metrics, error) {
@@ -68,13 +68,13 @@ func (n *NetworkCollector) Collect(ctx context.Context) ([]*Metrics, error) {
 			Category:  "network",
 			Timestamp: now,
 			Values: map[string]float64{
-				"rx_bytes":       float64(totalRx),
-				"tx_bytes":       float64(totalTx),
-				"rx_bytes_rate":  0,
-				"tx_bytes_rate":  0,
-				"rx_packets":     float64(totalRxPkt),
-				"tx_packets":     float64(totalTxPkt),
-				"connections":    float64(countTCPConnections()),
+				"rx_bytes":      float64(totalRx),
+				"tx_bytes":      float64(totalTx),
+				"rx_bytes_rate": 0,
+				"tx_bytes_rate": 0,
+				"rx_packets":    float64(totalRxPkt),
+				"tx_packets":    float64(totalTxPkt),
+				"connections":   float64(countTCPConnections()),
 			},
 		}}, nil
 	}
